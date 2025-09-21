@@ -1,7 +1,8 @@
 from fastapi import FastAPI, WebSocket
 from app.dependencies import agent
 from fastapi.responses import HTMLResponse
-
+import traceback
+import asyncio
 
 app = FastAPI()
 
@@ -30,6 +31,7 @@ html = """
             };
             function sendMessage(event) {
                 var input = document.getElementById("messageText")
+                console.log(input.value)
                 ws.send(input.value)
                 input.value = ''
                 event.preventDefault()
@@ -45,22 +47,26 @@ async def get():
     
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()  
-
+    await websocket.accept()
     while True:
         try:
-            # Receive message
             data = await websocket.receive_text()
             print("Received from client:", data)
+            try:
+    
 
-            # Pass message to AI agent
-            result = await agent.run_synch(data)
-            print("AI response:", result.data)
-
-            # Send AI response
-            await websocket.send_text(result.data)
-
+                result = await agent.run(data)
+                
+                print("AI response:", getattr(result, 'data', result))
+                await websocket.send_text(getattr(result, 'data', str(result)))
+            except Exception as agent_exc:
+                print("Agent error:", agent_exc)
+                await websocket.send_text(f"Agent error: {agent_exc}")
         except Exception as e:
-            print("Error:", e)
+            
+            print("WebSocket error:", e)
+            traceback.print_exc()
             await websocket.close()
             break
+
+    
