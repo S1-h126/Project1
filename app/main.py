@@ -53,10 +53,7 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             print("Received from client:", data)
             try:
-    
-
                 result = await agent.run(data)
-                
                 print("AI response:", getattr(result, 'data', result))
                 await websocket.send_text(getattr(result, 'data', str(result)))
             except Exception as agent_exc:
